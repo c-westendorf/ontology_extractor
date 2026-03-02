@@ -1,0 +1,2 @@
+table_a,col_a,table_b,col_b,a_distinct,b_distinct,a_in_b_count,b_in_a_count,a_coverage,b_coverage,direction_suggestion
+TABLE_A,REF_CODE,TABLE_B,REF_CODE,1000,100,950,100,0.95,1.0,TABLE_B is likely the PARENT (referred) table

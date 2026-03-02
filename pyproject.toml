@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rigor"
+version = "0.1.0"
+description = "RIGOR-style ontology generation using Cursor CLI Agent"
+requires-python = ">=3.10"
+dependencies = [
+  "pydantic>=2.6",
+  "pyyaml>=6.0",
+  "rdflib>=7.0",
+  "sqlalchemy>=2.0",
+  "requests>=2.31",
+  "pandas>=2.0",
+  "streamlit>=1.32",
+]
+authors = [{name="Prompt Pilates / Chris"}]
+
+[project.optional-dependencies]
+snowflake = [
+  "snowflake-sqlalchemy>=1.5.3",
+  "snowflake-connector-python>=3.7.0",
+]
+vector = [
+  "sentence-transformers>=2.6.0",
+  "faiss-cpu>=1.7.4",
+]
+
+[tool.setuptools]
+packages = ["rigor"]
+
+[tool.pytest.ini_options]
+testpaths = ["rigor_v1/tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+]
+
+[tool.coverage.run]
+source = ["rigor_v1"]
+omit = [
+    "rigor_v1/tests/*",
+    "rigor_v1/__pycache__/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+fail_under = 85

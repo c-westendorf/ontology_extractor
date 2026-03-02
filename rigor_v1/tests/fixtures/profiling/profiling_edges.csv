@@ -1,0 +1,4 @@
+from_table,from_column,to_table,to_column,sample_rows,fk_nonnull,match_count,match_rate,pk_distinct,pk_total,pk_unique_rate,fk_null_rate,confidence_sql,frequency,evidence
+ORDERS,CUSTOMER_ID,CUSTOMERS,ID,10000,9800,9700,0.99,5000,5000,1.0,0.02,0.85,5,customers_orders.sql
+ORDER_ITEMS,ORDER_ID,ORDERS,ID,50000,50000,49500,0.99,10000,10000,1.0,0.0,0.90,3,order_details.sql
+ORDER_ITEMS,PRODUCT_ID,PRODUCTS,ID,50000,49000,48500,0.99,1000,1000,1.0,0.02,0.85,2,order_details.sql

@@ -1,0 +1,6 @@
+approve: []
+reject: []
+rename: []
+
+# table_classification: map of TABLE_NAME -> classification string (e.g., bridge, fact, dimension, entity, staging)
+table_classification: {}

@@ -1,0 +1,36 @@
+approve:
+  - from:
+      table: ORDERS
+      columns:
+        - CUSTOMER_ID
+    to:
+      table: CUSTOMERS
+      columns:
+        - ID
+    relation: hasCustomer
+  - from:
+      table: ORDER_ITEMS
+      columns:
+        - PRODUCT_ID
+    to:
+      table: PRODUCTS
+      columns:
+        - ID
+
+reject:
+  - from:
+      table: TEMP_TABLE
+      columns:
+        - REF_ID
+    to:
+      table: OTHER_TABLE
+      columns:
+        - ID
+
+rename: []
+
+table_classification:
+  CUSTOMERS: dimension
+  ORDERS: fact
+  PRODUCTS: dimension
+  ORDER_ITEMS: bridge

@@ -1,0 +1,33 @@
+{
+  "run_id": "2026-03-02_004",
+  "generated_at": "2026-03-02T15:50:18Z",
+  "generated_by": "rigor-sf v1.0 / query_gen.py",
+  "sql_worksheets_ingested": [
+    "/var/folders/32/x61r3nkd55dd30vm0g0c6wp00000gn/T/tmpug49kzk8/sql_worksheets/customers_orders.sql",
+    "/var/folders/32/x61r3nkd55dd30vm0g0c6wp00000gn/T/tmpug49kzk8/sql_worksheets/order_items.sql"
+  ],
+  "worksheets_hash": "sha256:5313a783ad6d89dc",
+  "candidate_edges_found": 3,
+  "ambiguous_direction_edges": 0,
+  "sample_limit": 1000,
+  "queries_generated": {
+    "01_profiling_edges.sql": {
+      "purpose": "Match rate and uniqueness profiling for 3 candidate join edges",
+      "estimated_rows_scanned": "~3k (up to 1,000 rows per edge)",
+      "instructions": "Run in Snowflake. Export result as CSV to results/profiling_edges.csv",
+      "required": true
+    },
+    "02_column_profiles.sql": {
+      "purpose": "Null rates, cardinality, and value distributions for join columns",
+      "instructions": "Run in Snowflake. Export result as CSV to results/column_profiles.csv",
+      "required": true
+    },
+    "03_value_overlap.sql": {
+      "purpose": "Bidirectional overlap for 0 ambiguous-direction edge(s)",
+      "instructions": "Optional. Run and export to results/value_overlap.csv",
+      "required": false
+    }
+  },
+  "downstream_run": null,
+  "notes": ""
+}
