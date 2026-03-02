@@ -53,7 +53,7 @@ Produce the most **precise**, **auditable**, and **maintainable** OWL ontology r
 
 ### Phase A — Infer (SQL ingestion)
 Command:
-- `python -m rigor.pipeline --config rigor/config.yaml --sql-dir sql_worksheets/ --phase infer`
+- `rigor --config config/config.yaml --sql-dir sql_worksheets/ --phase infer`
 
 Behavior:
 - Parse `.sql` files and extract join edges:
@@ -68,7 +68,7 @@ Behavior:
 
 ### Phase B — Profile (Snowflake validation) …  
 Command:
-- `python -m rigor.pipeline ... --phase profile`
+- `rigor ... --phase profile`
 
 Behavior:
 - For each candidate relationship, compute evidence statistics (sampling-limited):
@@ -81,7 +81,7 @@ Behavior:
 
 ### Phase C — Review (Local UI)
 Command:
-- `streamlit run -m rigor.ui.app`
+- `streamlit run rigor_sf/ui/app.py`
 
 Capabilities:
 - Filter relationships by confidence/match_rate/text search
@@ -95,7 +95,7 @@ Capabilities:
 
 ### Phase D — Generate (RIGOR loop)
 Command:
-- `python -m rigor.pipeline ... --phase generate`
+- `rigor ... --phase generate`
 
 Behavior:
 - Load schema + metadata

@@ -517,9 +517,9 @@
 
 After all tasks complete:
 
-- [ ] `python -m rigor.pipeline --phase query-gen` exits 0
-- [ ] `python -m rigor.pipeline --phase generate` exits 2 if no profiling
-- [ ] `python -m rigor.pipeline --phase validate` exits 3 if coverage < 50%
+- [ ] `rigor --phase query-gen` exits 0
+- [ ] `rigor --phase generate` exits 2 if no profiling
+- [ ] `rigor --phase validate` exits 3 if coverage < 50%
 - [ ] `core.owl` is symlink to `core_<timestamp>.owl`
 - [ ] Auto-approved edges marked in CSV
 - [ ] Incremental run skips unchanged tables

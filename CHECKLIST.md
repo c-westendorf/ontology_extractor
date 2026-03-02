@@ -250,7 +250,7 @@
 | `sql_worksheets/*.sql` | `[x]` | Exists |
 | `metadata/tables.csv` | `[x]` | Exists |
 | `metadata/columns.csv` | `[x]` | Exists |
-| `rigor/config.yaml` | `[x]` | Update schema |
+| `config/config.yaml` | `[x]` | Update schema |
 | `runs/<ts>/results/*.csv` | `[x]` | Exists |
 
 ### 9.2 Output Files
@@ -425,33 +425,33 @@ Run these commands to verify implementation:
 
 ```bash
 # 1. Config loads correctly
-python -c "from rigor_v1.config import load_config; load_config('rigor/config.yaml')"
+python -c "from rigor_sf.config import load_config; load_config('config/config.yaml')"
 
 # 2. Query-gen phase works
-python -m rigor.pipeline --config rigor/config.yaml --sql-dir sql_worksheets/ --phase query-gen
+rigor --config config/config.yaml --sql-dir sql_worksheets/ --phase query-gen
 
 # 3. Infer phase works (with profiling)
-python -m rigor.pipeline --config rigor/config.yaml --sql-dir sql_worksheets/ --run-dir runs/<ts>/ --phase infer
+rigor --config config/config.yaml --sql-dir sql_worksheets/ --run-dir runs/<ts>/ --phase infer
 
 # 4. Generate fails without profiling (exit code 2)
-python -m rigor.pipeline --config rigor/config.yaml --phase generate
+rigor --config config/config.yaml --phase generate
 echo "Exit code: $?"  # Should be 2
 
 # 5. Generate works with profiling
-python -m rigor.pipeline --config rigor/config.yaml --phase generate
+rigor --config config/config.yaml --phase generate
 
 # 6. Validate produces correct report
-python -m rigor.pipeline --config rigor/config.yaml --phase validate
+rigor --config config/config.yaml --phase validate
 
 # 7. Check versioned artifacts
 ls -la data/core*.owl
 ls -la data/validation_report*.json
 
 # 8. Run tests
-pytest tests/ -v --cov=rigor_v1 --cov-report=term-missing
+pytest tests/ -v --cov=rigor_sf --cov-report=term-missing
 
 # 9. Check coverage meets targets
-pytest tests/ --cov=rigor_v1 --cov-fail-under=85
+pytest tests/ --cov=rigor_sf --cov-fail-under=85
 ```
 
 ---

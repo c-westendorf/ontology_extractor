@@ -130,6 +130,7 @@ celerybeat.pid
 # Environments
 .env
 .venv
+.venv.verify/
 env/
 venv/
 ENV/
@@ -179,3 +180,14 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+.specify/
+.claude/commands/
+
+# RIGOR-SF runtime artifacts
+runs/
+artifacts/
+data/
+config/config.yaml
+
+# macOS
+.DS_Store

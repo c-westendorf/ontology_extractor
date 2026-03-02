@@ -36,8 +36,8 @@ pip install -e .
 ### 2. Configure
 
 ```bash
-cp rigor_v1/config.example.yaml rigor/config.yaml
-# Edit rigor/config.yaml with your settings
+cp rigor_sf/config.example.yaml config/config.yaml
+# Edit config/config.yaml with your settings
 ```
 
 ### 3. Ensure Cursor CLI Works
@@ -57,7 +57,7 @@ If not found, install Cursor CLI per Cursor docs and ensure `agent` is on PATH.
 Generate profiling SQL templates from SQL worksheets:
 
 ```bash
-python -m rigor.pipeline --config rigor/config.yaml \
+rigor --config config/config.yaml \
   --sql-dir sql_worksheets/ --phase query-gen
 ```
 
@@ -79,7 +79,7 @@ python -m rigor.pipeline --config rigor/config.yaml \
 Extract relationships and merge profiling data:
 
 ```bash
-python -m rigor.pipeline --config rigor/config.yaml \
+rigor --config config/config.yaml \
   --sql-dir sql_worksheets/ --run-dir runs/<timestamp>/ --phase infer
 ```
 
@@ -92,7 +92,7 @@ python -m rigor.pipeline --config rigor/config.yaml \
 Launch the Streamlit review UI:
 
 ```bash
-streamlit run -m rigor_v1/ui/app.py
+streamlit run rigor_sf/ui/app.py
 ```
 
 **Features:**
@@ -110,7 +110,7 @@ streamlit run -m rigor_v1/ui/app.py
 Generate OWL ontology from approved relationships:
 
 ```bash
-python -m rigor.pipeline --config rigor/config.yaml --phase generate
+rigor --config config/config.yaml --phase generate
 ```
 
 **Outputs:**
@@ -124,7 +124,7 @@ python -m rigor.pipeline --config rigor/config.yaml --phase generate
 Verify OWL quality and coverage:
 
 ```bash
-python -m rigor.pipeline --config rigor/config.yaml --phase validate
+rigor --config config/config.yaml --phase validate
 ```
 
 **Outputs:**
@@ -143,7 +143,7 @@ python -m rigor.pipeline --config rigor/config.yaml --phase validate
 ### Full Command Syntax
 
 ```bash
-python -m rigor.pipeline \
+rigor \
   --config PATH \
   --phase PHASE \
   [--sql-dir PATH] \
@@ -181,23 +181,23 @@ python -m rigor.pipeline \
 
 ```bash
 # Phase 0: Generate profiling SQL
-python -m rigor.pipeline --config rigor/config.yaml \
+rigor --config config/config.yaml \
   --sql-dir sql_worksheets/ --phase query-gen
 
 # [Analyst executes SQL in Snowflake, exports CSVs to runs/<ts>/results/]
 
 # Phase 1: Infer relationships
-python -m rigor.pipeline --config rigor/config.yaml \
+rigor --config config/config.yaml \
   --sql-dir sql_worksheets/ --run-dir runs/2026-03-01_001/ --phase infer
 
 # Phase 2: Review in UI
-streamlit run -m rigor.ui.app
+streamlit run rigor_sf/ui/app.py
 
 # Phase 3: Generate OWL
-python -m rigor.pipeline --config rigor/config.yaml --phase generate
+rigor --config config/config.yaml --phase generate
 
 # Phase 4: Validate
-python -m rigor.pipeline --config rigor/config.yaml --phase validate
+rigor --config config/config.yaml --phase validate
 ```
 
 ### Incremental Update (Single Table)
@@ -205,28 +205,28 @@ python -m rigor.pipeline --config rigor/config.yaml --phase validate
 Force regeneration of a specific table:
 
 ```bash
-python -m rigor.pipeline --config rigor/config.yaml \
+rigor --config config/config.yaml \
   --phase generate --force-regenerate CUSTOMERS
 ```
 
 Multiple tables:
 
 ```bash
-python -m rigor.pipeline --config rigor/config.yaml \
+rigor --config config/config.yaml \
   --phase generate --force-regenerate CUSTOMERS --force-regenerate ORDERS
 ```
 
 ### CI/CD Mode (Non-Interactive)
 
 ```bash
-python -m rigor.pipeline --config rigor/config.yaml \
+rigor --config config/config.yaml \
   --phase all --sql-dir sql_worksheets/ --non-interactive
 ```
 
 ### Run All Phases
 
 ```bash
-python -m rigor.pipeline --config rigor/config.yaml \
+rigor --config config/config.yaml \
   --phase all --sql-dir sql_worksheets/
 ```
 
@@ -234,7 +234,7 @@ python -m rigor.pipeline --config rigor/config.yaml \
 
 ## Configuration
 
-See `rigor_v1/config.example.yaml` for full configuration options.
+See `rigor_sf/config.example.yaml` for full configuration options.
 
 ### Key Configuration Sections
 
@@ -272,7 +272,7 @@ validation:
 | `sql_worksheets/*.sql` | SQL | Join inference source |
 | `metadata/tables.csv` | CSV | Table comments (table, comment) |
 | `metadata/columns.csv` | CSV | Column comments (table, column, comment) |
-| `rigor/config.yaml` | YAML | Pipeline configuration |
+| `config/config.yaml` | YAML | Pipeline configuration |
 | `runs/<ts>/results/*.csv` | CSV | Profiling results from analyst |
 
 ### Output Files
@@ -364,13 +364,19 @@ metadata:
 Run the test suite:
 
 ```bash
-pytest rigor_v1/tests/ -v
+pytest rigor_sf/tests/ -v
 ```
 
 With coverage:
 
 ```bash
-pytest rigor_v1/tests/ --cov=rigor_v1 --cov-report=term-missing
+pytest rigor_sf/tests/ --cov=rigor_sf --cov-report=term-missing
+```
+
+Run full post-migration verification (writes JSON + Markdown reports to `artifacts/`):
+
+```bash
+scripts/verify_migration.sh
 ```
 
 ---
@@ -379,7 +385,7 @@ pytest rigor_v1/tests/ --cov=rigor_v1 --cov-report=term-missing
 
 - [SPEC_V2.md](SPEC_V2.md) - Full product specification
 - [CONSTITUTION.md](CONSTITUTION.md) - Project principles
-- [rigor_v1/config.example.yaml](rigor_v1/config.example.yaml) - Configuration reference
+- [rigor_sf/config.example.yaml](rigor_sf/config.example.yaml) - Configuration reference
 
 ---
 

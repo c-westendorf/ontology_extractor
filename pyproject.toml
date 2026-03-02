@@ -3,7 +3,7 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "rigor"
+name = "rigor-sf"
 version = "0.1.0"
 description = "RIGOR-style ontology generation using Cursor CLI Agent"
 requires-python = ">=3.10"
@@ -18,6 +18,9 @@ dependencies = [
 ]
 authors = [{name="Prompt Pilates / Chris"}]
 
+[project.scripts]
+rigor = "rigor_sf.pipeline:main"
+
 [project.optional-dependencies]
 snowflake = [
   "snowflake-sqlalchemy>=1.5.3",
@@ -28,11 +31,11 @@ vector = [
   "faiss-cpu>=1.7.4",
 ]
 
-[tool.setuptools]
-packages = ["rigor"]
+[tool.setuptools.packages.find]
+include = ["rigor_sf*"]
 
 [tool.pytest.ini_options]
-testpaths = ["rigor_v1/tests"]
+testpaths = ["rigor_sf/tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
@@ -47,10 +50,10 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = ["rigor_v1"]
+source = ["rigor_sf"]
 omit = [
-    "rigor_v1/tests/*",
-    "rigor_v1/__pycache__/*",
+    "rigor_sf/tests/*",
+    "rigor_sf/__pycache__/*",
 ]
 
 [tool.coverage.report]

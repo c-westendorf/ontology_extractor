@@ -9,7 +9,7 @@
 
 ## 1. Executive Summary
 
-RIGOR-SF is an iterative ontology generation pipeline that transforms Snowflake schemas into OWL 2 DL ontologies through a combination of SQL analysis, data profiling, LLM-based generation, and human review. This v2 specification is based on a comprehensive audit of the rigor_v1 prototype.
+RIGOR-SF is an iterative ontology generation pipeline that transforms Snowflake schemas into OWL 2 DL ontologies through a combination of SQL analysis, data profiling, LLM-based generation, and human review. This v2 specification is based on a comprehensive audit of the rigor_sf prototype.
 
 ### 1.1 Key Changes from v0
 
@@ -131,7 +131,7 @@ Produce the most **precise**, **auditable**, and **maintainable** OWL ontology r
 
 **Command:**
 ```bash
-python -m rigor.pipeline --config rigor/config.yaml --sql-dir sql_worksheets/ --phase query-gen
+rigor --config config/config.yaml --sql-dir sql_worksheets/ --phase query-gen
 ```
 
 **Inputs:**
@@ -164,7 +164,7 @@ python -m rigor.pipeline --config rigor/config.yaml --sql-dir sql_worksheets/ --
 
 **Command:**
 ```bash
-python -m rigor.pipeline --config rigor/config.yaml --sql-dir sql_worksheets/ --run-dir runs/<timestamp>/ --phase infer
+rigor --config config/config.yaml --sql-dir sql_worksheets/ --run-dir runs/<timestamp>/ --phase infer
 ```
 
 **Inputs:**
@@ -190,7 +190,7 @@ python -m rigor.pipeline --config rigor/config.yaml --sql-dir sql_worksheets/ --
 
 **Command:**
 ```bash
-streamlit run -m rigor.ui.app
+streamlit run rigor_sf/ui/app.py
 ```
 
 **Tabs:**
@@ -230,7 +230,7 @@ Phase 2 can be partially automated via configurable thresholds:
 
 **Command:**
 ```bash
-python -m rigor.pipeline --config rigor/config.yaml --phase generate
+rigor --config config/config.yaml --phase generate
 ```
 
 **Inputs:**
@@ -284,7 +284,7 @@ Generation phase **requires** profiling CSVs. If profiling is missing:
 
 **Command:**
 ```bash
-python -m rigor.pipeline --config rigor/config.yaml --phase validate
+rigor --config config/config.yaml --phase validate
 ```
 
 **Inputs:**
@@ -315,7 +315,7 @@ python -m rigor.pipeline --config rigor/config.yaml --phase validate
 | `sql_worksheets/*.sql` | SQL | Join inference source |
 | `metadata/tables.csv` | CSV | Table comments |
 | `metadata/columns.csv` | CSV | Column comments |
-| `rigor/config.yaml` | YAML | Pipeline configuration |
+| `config/config.yaml` | YAML | Pipeline configuration |
 | `runs/<ts>/results/*.csv` | CSV | Profiling results from analyst |
 
 ### 7.2 Output Files
@@ -747,11 +747,11 @@ runs/                           # NEW
 
 ```bash
 # OLD (v0)
-python -m rigor.pipeline --phase infer
+rigor --phase infer
 
 # NEW (v2)
-python -m rigor.pipeline --phase query-gen  # NEW phase
-python -m rigor.pipeline --phase infer --run-dir runs/<ts>/
+rigor --phase query-gen  # NEW phase
+rigor --phase infer --run-dir runs/<ts>/
 ```
 
 ---
@@ -762,7 +762,7 @@ python -m rigor.pipeline --phase infer --run-dir runs/<ts>/
 
 ```bash
 # Full command syntax
-python -m rigor.pipeline \
+rigor \
   --config PATH \
   --phase PHASE \
   [--sql-dir PATH] \
@@ -798,34 +798,34 @@ python -m rigor.pipeline \
 **First-time setup (with profiling):**
 ```bash
 # Phase 0: Generate profiling SQL
-python -m rigor.pipeline --config rigor/config.yaml \
+rigor --config config/config.yaml \
   --sql-dir sql_worksheets/ --phase query-gen
 
 # [Analyst executes SQL in Snowflake, exports CSVs to runs/<ts>/results/]
 
 # Phase 1: Infer relationships with profiling
-python -m rigor.pipeline --config rigor/config.yaml \
+rigor --config config/config.yaml \
   --sql-dir sql_worksheets/ --run-dir runs/2026-03-01_001/ --phase infer
 
 # Phase 2: Review in UI
-streamlit run -m rigor.ui.app
+streamlit run rigor_sf/ui/app.py
 
 # Phase 3: Generate OWL
-python -m rigor.pipeline --config rigor/config.yaml --phase generate
+rigor --config config/config.yaml --phase generate
 
 # Phase 4: Validate
-python -m rigor.pipeline --config rigor/config.yaml --phase validate
+rigor --config config/config.yaml --phase validate
 ```
 
 **Incremental update (single table):**
 ```bash
-python -m rigor.pipeline --config rigor/config.yaml \
+rigor --config config/config.yaml \
   --phase generate --force-regenerate CUSTOMERS
 ```
 
 **CI/CD mode (non-interactive):**
 ```bash
-python -m rigor.pipeline --config rigor/config.yaml \
+rigor --config config/config.yaml \
   --phase all --sql-dir sql_worksheets/ --non-interactive
 ```
 
@@ -1020,7 +1020,7 @@ The validation phase produces `data/validation_report.json`:
 
 - [CONSTITUTION.md](CONSTITUTION.md) — Project principles
 - [README.md](README.md) — Quick start guide
-- [rigor_v1/](rigor_v1/) — Prototype implementation
+- [rigor_sf/](rigor_sf/) — Prototype implementation
 
 ### 18.3 References
 

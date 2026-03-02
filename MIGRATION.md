@@ -147,7 +147,7 @@ v2 adds Phase 0 for generating profiling SQL templates:
 
 ```bash
 # NEW in v2
-python -m rigor.pipeline --config rigor/config.yaml \
+rigor --config config/config.yaml \
   --sql-dir sql_worksheets/ --phase query-gen
 ```
 
@@ -202,7 +202,7 @@ v2 caches table fingerprints and skips unchanged tables:
 
 ```bash
 # Force regeneration of specific tables
-python -m rigor.pipeline --phase generate --force-regenerate CUSTOMERS
+rigor --phase generate --force-regenerate CUSTOMERS
 ```
 
 ---
@@ -268,4 +268,4 @@ The validation report now includes SPARQL-based coverage metrics:
 
 ## Full Config Template
 
-See [rigor_v1/config.example.yaml](rigor_v1/config.example.yaml) for a complete v2 configuration template with inline comments.
+See [rigor_sf/config.example.yaml](rigor_sf/config.example.yaml) for a complete v2 configuration template with inline comments.

@@ -79,7 +79,7 @@ Keep pipeline phases distinct to allow human intervention:
 | `sql_worksheets/*.sql` | SQL worksheets for join inference |
 | `metadata/tables.csv` | Optional table comments |
 | `metadata/columns.csv` | Optional column comments |
-| `rigor/config.yaml` | Pipeline configuration |
+| `config/config.yaml` | Pipeline configuration |
 | `runs/<ts>/results/*.csv` | Profiling results from analyst |
 
 ### Output Files

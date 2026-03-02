@@ -1,0 +1,81 @@
+# RIGOR-SF Configuration Example
+# Copy to config/config.yaml and edit.
+# See SPEC_V2.md §9 for full documentation.
+
+db:
+  url: "snowflake://USER:PASSWORD@ACCOUNT/DB/SCHEMA?warehouse=WH&role=ROLE"
+  schema: null   # optional; keep null for Snowflake URL including schema
+  include_tables: []  # optional list; empty means all
+  exclude_tables: []  # optional list; empty means none
+
+# LLM provider configuration (SPEC §9)
+# In v2, only 'cursor' provider is supported
+llm:
+  provider: "cursor"
+  model: "claude-3.5-sonnet"
+  command: "agent"
+  output_format: "json"
+  debug: false
+  max_retries: 3
+  interactive_on_failure: true  # if true, prompt user when LLM fails
+
+# Review phase configuration (SPEC §9)
+review:
+  auto_approve_threshold: 0.95  # match_rate threshold for auto-approve
+  auto_approve_confidence: 0.80  # SQL confidence threshold
+  require_human_review: true  # if false, skip UI for auto-approved edges
+
+# Ontology generation configuration (SPEC §9)
+ontology:
+  base_iri: "http://example.org/rigor#"
+  format: "xml"  # xml | turtle | n3
+  naming: "standard"  # standard = PascalCase classes, camelCase properties
+
+# Profiling thresholds (SPEC §9)
+profiling:
+  sample_limit: 200000
+  match_rate_threshold: 0.90
+  null_rate_warning: 0.20
+  frequency_boost_5: 0.05
+  frequency_boost_10: 0.10
+
+# Validation configuration (SPEC §9)
+validation:
+  coverage_warn_threshold: 0.50  # warn if below
+  coverage_pass_threshold: 0.90  # fail if below
+  allow_duplicate_iris: false
+
+# File paths
+paths:
+  core_in: "data/core.owl"           # initial core if exists; else starts empty
+  core_out: "data/core.owl"          # output core ontology (symlinked to latest versioned)
+  provenance_jsonl: "data/provenance.jsonl"
+  fragments_dir: "data/fragments"
+  inferred_relationships_csv: "data/inferred_relationships.csv"
+  overrides_yaml: "golden/overrides.yaml"
+  runs_dir: "runs"  # base directory for query-gen runs
+  data_quality_report: "data/data_quality_report.json"
+  validation_report: "data/validation_report.json"
+
+# Metadata enrichment
+metadata:
+  # Optional CSV enrichments
+  tables_csv: "metadata/tables.csv"
+  columns_csv: "metadata/columns.csv"
+
+  # Lumina MCP configuration
+  lumina:
+    enabled: false
+    base_url: ""
+    bearer_token: ""
+    chat_path: "/chat"
+    extra_headers: {}
+    strict_json: true
+    timeout_seconds: 30
+    retry_count: 2
+
+# Legacy alias (deprecated, use 'llm' instead)
+# cursor_agent:
+#   command: "agent"
+#   output_format: "json"
+#   debug: false

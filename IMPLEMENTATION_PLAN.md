@@ -1,14 +1,14 @@
 # RIGOR-SF v2 Implementation Plan
 
 **Created:** 2026-03-01
-**Based on:** SPEC_V2.md, rigor_v1 audit
+**Based on:** SPEC_V2.md, rigor_sf audit
 **Estimated Effort:** ~60 hours (~2 weeks at 30h/week)
 
 ---
 
 ## Executive Summary
 
-This plan upgrades rigor_v1 to meet SPEC_V2.md requirements. The v1 prototype provides **~65% reusable code**. Key areas requiring work:
+This plan upgrades rigor_sf to meet SPEC_V2.md requirements. The v1 prototype provides **~65% reusable code**. Key areas requiring work:
 
 | Category | Effort | Priority |
 |----------|--------|----------|
@@ -28,7 +28,7 @@ This plan upgrades rigor_v1 to meet SPEC_V2.md requirements. The v1 prototype pr
 
 ### 1.1 Configuration Schema Refactor
 
-**File:** `rigor_v1/config.py`
+**File:** `rigor_sf/config.py`
 **Effort:** 4 hours
 
 **Current State:**
@@ -99,7 +99,7 @@ class AppConfig(BaseModel):
 
 ### 1.2 Exit Codes
 
-**File:** `rigor_v1/exit_codes.py` (NEW)
+**File:** `rigor_sf/exit_codes.py` (NEW)
 **Effort:** 1 hour
 
 ```python
@@ -113,7 +113,7 @@ class ExitCode(IntEnum):
     LLM_GENERATION_FAILED = 4
 ```
 
-**File:** `rigor_v1/pipeline.py` (UPDATE)
+**File:** `rigor_sf/pipeline.py` (UPDATE)
 
 ```python
 # Update main() to wrap phases with try/except and return exit codes
@@ -153,7 +153,7 @@ if __name__ == "__main__":
 
 ### 1.3 LLM Provider Interface
 
-**File:** `rigor_v1/llm_provider.py` (NEW, refactored from cursor_cli.py)
+**File:** `rigor_sf/llm_provider.py` (NEW, refactored from cursor_cli.py)
 **Effort:** 5 hours
 
 ```python
@@ -244,7 +244,7 @@ def get_provider(config: "LLMConfig") -> LLMProvider:
 
 ### 1.4 Error Recovery & Retry Logic
 
-**File:** `rigor_v1/llm_provider.py` (UPDATE)
+**File:** `rigor_sf/llm_provider.py` (UPDATE)
 **Effort:** 3 hours (included in 1.3)
 
 ```python
@@ -298,7 +298,7 @@ def _prompt_user(message: str) -> str:
 
 ### 1.5 Timestamp Versioning
 
-**File:** `rigor_v1/versioning.py` (NEW)
+**File:** `rigor_sf/versioning.py` (NEW)
 **Effort:** 4 hours
 
 ```python
@@ -333,7 +333,7 @@ def get_latest_version(path: Path) -> Optional[Path]:
     return path if path.exists() else None
 ```
 
-**File:** `rigor_v1/pipeline.py` (UPDATE)
+**File:** `rigor_sf/pipeline.py` (UPDATE)
 
 ```python
 # In phase_generate():
@@ -363,7 +363,7 @@ versioned_path = version_artifact(
 
 ### 1.6 Auto-Approve Logic
 
-**File:** `rigor_v1/pipeline.py` (UPDATE phase_infer)
+**File:** `rigor_sf/pipeline.py` (UPDATE phase_infer)
 **Effort:** 3 hours
 
 ```python
@@ -397,7 +397,7 @@ def phase_infer(cfg: AppConfig, args: argparse.Namespace):
 
 ### 1.7 Profiling Prerequisite Check
 
-**File:** `rigor_v1/pipeline.py` (UPDATE phase_generate)
+**File:** `rigor_sf/pipeline.py` (UPDATE phase_generate)
 **Effort:** 2 hours
 
 ```python
@@ -417,9 +417,9 @@ def phase_generate(cfg: AppConfig, args: argparse.Namespace):
     if not _check_profiling_exists(cfg):
         raise PrerequisiteError(
             "Profiling data not found. Please complete:\n"
-            "  1. Phase 0: python -m rigor.pipeline --phase query-gen --sql-dir ...\n"
+            "  1. Phase 0: rigor --phase query-gen --sql-dir ...\n"
             "  2. Execute SQL in Snowflake, export CSVs to runs/<ts>/results/\n"
-            "  3. Phase 1: python -m rigor.pipeline --phase infer --run-dir ...\n"
+            "  3. Phase 1: rigor --phase infer --run-dir ...\n"
         )
 
     # ... rest of generate logic ...
@@ -435,7 +435,7 @@ def phase_generate(cfg: AppConfig, args: argparse.Namespace):
 
 ### 1.8 SPARQL-Based Coverage Validation
 
-**File:** `rigor_v1/sparql_validation.py` (NEW)
+**File:** `rigor_sf/sparql_validation.py` (NEW)
 **Effort:** 5 hours
 
 ```python
@@ -553,7 +553,7 @@ def validate_bridge_tables(graph: Graph, base_iri: str) -> List[Dict[str, Any]]:
 
 ### 1.9 Validation Report Schema
 
-**File:** `rigor_v1/pipeline.py` (UPDATE phase_validate)
+**File:** `rigor_sf/pipeline.py` (UPDATE phase_validate)
 **Effort:** 3 hours
 
 ```python
@@ -649,7 +649,7 @@ def phase_validate(cfg: AppConfig, args: argparse.Namespace):
 
 ### 1.10 Update prompts.py for base_iri
 
-**File:** `rigor_v1/prompts.py` (UPDATE)
+**File:** `rigor_sf/prompts.py` (UPDATE)
 **Effort:** 1 hour
 
 ```python
@@ -689,7 +689,7 @@ def build_judge_prompt(
 
 ### 2.1 Incremental Generation
 
-**File:** `rigor_v1/pipeline.py` (UPDATE)
+**File:** `rigor_sf/pipeline.py` (UPDATE)
 **Effort:** 6 hours
 
 ```python
@@ -756,7 +756,7 @@ def phase_generate(cfg: AppConfig, args: argparse.Namespace):
 
 ### 2.2 CLI Argument Updates
 
-**File:** `rigor_v1/pipeline.py` (UPDATE main)
+**File:** `rigor_sf/pipeline.py` (UPDATE main)
 **Effort:** 1 hour
 
 ```python
@@ -786,7 +786,7 @@ def main():
 
 ### 2.3 Structured Logging
 
-**File:** `rigor_v1/logging_config.py` (NEW)
+**File:** `rigor_sf/logging_config.py` (NEW)
 **Effort:** 2 hours
 
 ```python
@@ -833,7 +833,7 @@ def setup_logging(run_dir: Optional[Path] = None, debug: bool = False):
 
 ### 2.4 Lumina Error Handling
 
-**File:** `rigor_v1/metadata/lumina_mcp.py` (UPDATE)
+**File:** `rigor_sf/metadata/lumina_mcp.py` (UPDATE)
 **Effort:** 2 hours
 
 ```python
@@ -905,7 +905,7 @@ class LuminaMCPClient:
 
 ### 3.1 Test Structure
 
-**Directory:** `rigor_v1/tests/` (NEW)
+**Directory:** `rigor_sf/tests/` (NEW)
 **Effort:** 12 hours
 
 ```
@@ -1007,9 +1007,9 @@ Week 3 (if needed):
 
 After implementation, verify:
 
-- [ ] `python -m rigor.pipeline --phase query-gen` exits with code 0
-- [ ] `python -m rigor.pipeline --phase generate` exits with code 2 if no profiling
-- [ ] `python -m rigor.pipeline --phase validate` exits with code 3 if coverage < 50%
+- [ ] `rigor --phase query-gen` exits with code 0
+- [ ] `rigor --phase generate` exits with code 2 if no profiling
+- [ ] `rigor --phase validate` exits with code 3 if coverage < 50%
 - [ ] `core.owl` is symlink to `core_<timestamp>.owl`
 - [ ] Auto-approved edges show in relationships CSV with status=approved
 - [ ] Incremental run skips unchanged tables
