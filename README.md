@@ -20,6 +20,28 @@ The pipeline extracts relationships from SQL worksheets, validates them with pro
 
 ## Quick Start
 
+Start here for a dedicated onboarding walkthrough: [ONBOARDING.md](ONBOARDING.md).
+
+### 0. Mental Model (Read First)
+
+RIGOR-SF is worksheet-first:
+
+1. Gather analyst-authored SQL worksheets (existing Snowflake queries).
+2. Place them in `sql_worksheets/`.
+3. Run Phase 0 (`query-gen`) to generate profiling SQL.
+4. Analyst runs generated SQL in Snowflake and exports CSVs to `runs/<ts>/results/`.
+5. Run Phase 1 (`infer`) to merge worksheet evidence plus profiling signals.
+6. Run review, generate, and validate phases.
+
+### 0.5 Populate Inputs
+
+| Input | Required | Why it matters |
+|------|----------|----------------|
+| `sql_worksheets/*.sql` | Yes | Primary relationship evidence. Parsed in `query-gen` and `infer`. |
+| `metadata/tables.csv` | No | Optional table-level context to improve ontology naming and comments. |
+| `metadata/columns.csv` | No | Optional column-level context to improve ontology quality. |
+| `runs/<ts>/results/*.csv` | No (for SQL extraction), Yes (for profiling-enriched infer) | Analyst handoff outputs from Snowflake profiling SQL. |
+
 ### 1. Install
 
 ```bash
@@ -47,6 +69,19 @@ agent --help
 ```
 
 If not found, install Cursor CLI per Cursor docs and ensure `agent` is on PATH.
+
+### First Successful Run Checklist
+
+After `query-gen`:
+- `runs/<timestamp>/queries/01_profiling_edges.sql` exists
+- `runs/<timestamp>/queries/02_column_profiles.sql` exists
+- `runs/<timestamp>/queries/03_value_overlap.sql` exists
+- `runs/<timestamp>/README.md` exists with analyst execution/export instructions
+
+After `infer`:
+- `data/inferred_relationships.csv` exists
+- `data/data_quality_report.json` exists
+- If profiling CSVs are missing, infer still runs but confidence uses weaker signals
 
 ---
 
@@ -184,11 +219,18 @@ rigor \
 rigor --config config/config.yaml \
   --sql-dir sql_worksheets/ --phase query-gen
 
-# [Analyst executes SQL in Snowflake, exports CSVs to runs/<ts>/results/]
+# Phase 0.5: handoff to analyst (manual Snowflake execution)
+# 1) Open the generated run guide, for example:
+ls -1dt runs/*/README.md | head -1
+# 2) Analyst runs queries/01..03 in Snowflake and exports:
+#    runs/<ts>/results/profiling_edges.csv
+#    runs/<ts>/results/column_profiles.csv
+#    runs/<ts>/results/value_overlap.csv (optional)
+# 3) Use that same runs/<ts>/ path for infer
 
 # Phase 1: Infer relationships
 rigor --config config/config.yaml \
-  --sql-dir sql_worksheets/ --run-dir runs/2026-03-01_001/ --phase infer
+  --sql-dir sql_worksheets/ --run-dir runs/<timestamp>/ --phase infer
 
 # Phase 2: Review in UI
 streamlit run rigor_sf/ui/app.py
@@ -383,6 +425,7 @@ scripts/verify_migration.sh
 
 ## Documentation
 
+- [ONBOARDING.md](ONBOARDING.md) - Jump-start onboarding (worksheet-first workflow)
 - [SPEC_V2.md](SPEC_V2.md) - Full product specification
 - [CONSTITUTION.md](CONSTITUTION.md) - Project principles
 - [rigor_sf/config.example.yaml](rigor_sf/config.example.yaml) - Configuration reference
