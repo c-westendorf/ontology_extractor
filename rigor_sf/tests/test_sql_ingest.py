@@ -17,6 +17,8 @@ Tests cover:
 from __future__ import annotations
 
 import tempfile
+import json
+import importlib.util
 from pathlib import Path
 
 import pytest
@@ -27,10 +29,13 @@ from rigor_sf.sql_ingest import (
     _normalize_table,
     _strip_sql_comments,
     edges_to_inferred_fks,
+    get_last_ingest_diagnostics,
     ingest_sql_dir,
     parse_sql_file,
     parse_sql_text,
 )
+
+HAS_SQLGLOT = importlib.util.find_spec("sqlglot") is not None
 
 
 # ── Comment Stripping Tests ───────────────────────────────────────────────────
@@ -190,6 +195,10 @@ class TestParseSqlText:
         edges = parse_sql_text(sql, evidence="test_file.sql")
         assert len(edges) == 1
         assert "test_file.sql" in edges[0].evidence
+        assert edges[0].parser_dialect in ("snowflake", "generic", "fallback_regex")
+        assert edges[0].predicate_type
+        assert edges[0].confidence_reason
+        assert edges[0].source_query_block
 
     def test_left_join(self):
         sql = "SELECT * FROM a LEFT JOIN b ON a.ID = b.A_ID"
@@ -206,6 +215,60 @@ class TestParseSqlText:
         edges = parse_sql_text(sql)
         # Should find both conditions
         assert len(edges) == 2
+
+    def test_cte_chain_with_schema_qualified_names(self):
+        if not HAS_SQLGLOT:
+            pytest.skip("sqlglot not available")
+        sql = """
+        WITH base_orders AS (
+            SELECT o.customer_id, o.id
+            FROM DB1.PUBLIC.ORDERS o
+        )
+        SELECT *
+        FROM base_orders bo
+        JOIN DB1.PUBLIC.CUSTOMERS c
+          ON bo.customer_id = c.id
+        """
+        edges = parse_sql_text(sql)
+        assert len(edges) >= 1
+        assert any(e.left_table == "ORDERS" or e.right_table == "ORDERS" for e in edges)
+        assert any(e.left_table == "CUSTOMERS" or e.right_table == "CUSTOMERS" for e in edges)
+
+    def test_casted_join_predicate_classification(self):
+        if not HAS_SQLGLOT:
+            pytest.skip("sqlglot not available")
+        sql = """
+        SELECT *
+        FROM orders o
+        JOIN customers c ON CAST(o.customer_id AS VARCHAR) = c.id
+        """
+        edges = parse_sql_text(sql)
+        assert len(edges) >= 1
+        assert any(e.predicate_type in ("casted_eq", "eq_expression") for e in edges)
+
+    def test_inequality_join_predicate_captured(self):
+        if not HAS_SQLGLOT:
+            pytest.skip("sqlglot not available")
+        sql = """
+        SELECT *
+        FROM events e
+        JOIN windows w ON e.event_ts >= w.start_ts
+        """
+        edges = parse_sql_text(sql)
+        assert len(edges) >= 1
+        assert any(e.predicate_type == "range_or_inequality" for e in edges)
+
+    def test_function_based_join_predicate_captured(self):
+        if not HAS_SQLGLOT:
+            pytest.skip("sqlglot not available")
+        sql = """
+        SELECT *
+        FROM users u
+        JOIN emails e ON LOWER(u.email) = LOWER(e.email)
+        """
+        edges = parse_sql_text(sql)
+        assert len(edges) >= 1
+        assert any(e.predicate_type in ("function_based", "eq_expression") for e in edges)
 
 
 # ── Parse SQL File Tests ──────────────────────────────────────────────────────
@@ -270,6 +333,14 @@ class TestIngestSqlDir:
         )
         edges = ingest_sql_dir(str(temp_dir / "sql"))
         assert len(edges) == 2
+
+    def test_ingest_collects_diagnostics(self, sql_worksheet_dir):
+        edges = ingest_sql_dir(str(sql_worksheet_dir))
+        assert len(edges) >= 1
+        diagnostics = get_last_ingest_diagnostics()
+        assert diagnostics["file_count"] >= 1
+        assert diagnostics["edge_count"] >= 1
+        assert "predicate_type_counts" in diagnostics
 
 
 # ── Edges to Inferred FKs Tests ───────────────────────────────────────────────
@@ -423,6 +494,24 @@ class TestIntegration:
         edges = ingest_sql_dir(str(fixtures_dir))
         assert len(edges) >= 3  # Should find at least 3 join relationships
 
+    def test_sql_variance_golden_corpus(self):
+        if not HAS_SQLGLOT:
+            pytest.skip("sqlglot not available")
+        fixtures_dir = Path(__file__).parent / "fixtures" / "worksheets" / "variance"
+        expected_path = Path(__file__).parent / "fixtures" / "expected" / "sql_variance_expected.json"
+        expected = json.loads(expected_path.read_text(encoding="utf-8"))
+
+        edges = ingest_sql_dir(str(fixtures_dir))
+        assert len(edges) >= expected["min_edges"]
+
+        predicate_types = {e.predicate_type for e in edges}
+        for required in expected["required_predicate_types"]:
+            assert required in predicate_types
+
+        table_names = {e.left_table for e in edges} | {e.right_table for e in edges}
+        for required_table in expected["required_tables"]:
+            assert required_table in table_names
+
 
 # ── Edge Cases Tests ──────────────────────────────────────────────────────────
 
@@ -449,15 +538,29 @@ class TestEdgeCases:
         assert len(edges) == 1
 
     def test_subquery_in_from(self):
-        # Parser focuses on direct table JOINs; subqueries may not be resolved
-        sql = """SELECT * FROM A a JOIN B b ON a.B_ID = b.ID"""
+        if not HAS_SQLGLOT:
+            pytest.skip("sqlglot not available")
+        sql = """
+        SELECT *
+        FROM (
+            SELECT customer_id FROM orders
+        ) o
+        JOIN customers c ON o.customer_id = c.id
+        """
         edges = parse_sql_text(sql)
-        # Should find the direct join
         assert len(edges) >= 1
 
     def test_cte_with_join(self):
-        # Parser may not fully resolve CTEs; test with direct join
-        sql = """SELECT * FROM cte c JOIN other_table o ON c.OTHER_ID = o.ID"""
+        if not HAS_SQLGLOT:
+            pytest.skip("sqlglot not available")
+        sql = """
+        WITH cte AS (
+            SELECT other_id FROM source_table
+        )
+        SELECT *
+        FROM cte c
+        JOIN other_table o ON c.other_id = o.id
+        """
         edges = parse_sql_text(sql)
         assert len(edges) >= 1
 

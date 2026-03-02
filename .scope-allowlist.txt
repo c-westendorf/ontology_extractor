@@ -1,0 +1,5 @@
+# Path-scoped allowlist for delivery checks (tracked-file delta).
+# Keep this list narrow per task.
+
+.scope-allowlist.txt
+scripts/

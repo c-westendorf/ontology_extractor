@@ -1,0 +1,14 @@
+{
+  "min_edges": 5,
+  "required_predicate_types": [
+    "eq_column_column",
+    "range_or_inequality",
+    "function_based",
+    "casted_eq"
+  ],
+  "required_tables": [
+    "ORDERS",
+    "CUSTOMERS",
+    "ACCOUNTS"
+  ]
+}

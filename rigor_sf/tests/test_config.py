@@ -245,6 +245,45 @@ ontology:
             finally:
                 os.unlink(f.name)
 
+    def test_env_interpolation_required_and_default(self, monkeypatch):
+        """Interpolates ${VAR} and ${VAR:-default} values."""
+        monkeypatch.setenv("RIGOR_TEST_DB_URL", "sqlite:///:memory:")
+        monkeypatch.delenv("RIGOR_TOKEN", raising=False)
+
+        config_content = """
+db:
+  url: "${RIGOR_TEST_DB_URL}"
+metadata:
+  lumina:
+    enabled: true
+    bearer_token: "${RIGOR_TOKEN:-fallback-token}"
+"""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            f.write(config_content)
+            f.flush()
+            try:
+                cfg = load_config(f.name)
+                assert cfg.db.url == "sqlite:///:memory:"
+                assert cfg.metadata.lumina.bearer_token == "fallback-token"
+            finally:
+                os.unlink(f.name)
+
+    def test_env_interpolation_missing_required_var(self, monkeypatch):
+        """Missing required ${VAR} should raise ConfigError."""
+        monkeypatch.delenv("RIGOR_REQUIRED_VAR", raising=False)
+        config_content = """
+db:
+  url: "${RIGOR_REQUIRED_VAR}"
+"""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            f.write(config_content)
+            f.flush()
+            try:
+                with pytest.raises(ConfigError, match="Missing required environment variable"):
+                    load_config(f.name)
+            finally:
+                os.unlink(f.name)
+
     def test_validation_error(self):
         """ConfigError on validation failure."""
         config_content = """

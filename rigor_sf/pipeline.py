@@ -25,6 +25,7 @@ import subprocess
 import sys
 import warnings
 from pathlib import Path
+from time import perf_counter
 
 from rdflib import Graph
 
@@ -53,7 +54,7 @@ from .generation_cache import (
 )
 from .overrides import load_overrides
 from .relationships import write_inferred_relationships_csv, read_relationships_csv, write_relationships_csv
-from .sql_ingest import ingest_sql_dir, edges_to_inferred_fks
+from .sql_ingest import ingest_sql_dir, edges_to_inferred_fks, get_last_ingest_diagnostics
 from .metadata.csv_meta import load_table_comments, load_column_comments
 from .metadata.lumina_mcp import LuminaMCPClient, LuminaMCPConfig
 from .retrieval.schema_docs import schema_context
@@ -63,6 +64,7 @@ from .prompts import build_gen_prompt, build_judge_prompt
 from .owl import merge_fragment
 from .query_gen import generate_run
 from .run_loader import RunLoader
+from .metrics import MetricsWriter
 
 
 # ── Schema loading ─────────────────────────────────────────────────────────────
@@ -142,6 +144,11 @@ def phase_infer(cfg, sql_dir, run_dir, relationships_csv):
 
     raw_edges = ingest_sql_dir(sql_dir)
     log.info("%d raw join edges found", len(raw_edges))
+    ingest_diag = get_last_ingest_diagnostics()
+    if ingest_diag:
+        diag_path = Path(relationships_csv).parent / "sql_ingest_diagnostics.json"
+        diag_path.write_text(json.dumps(ingest_diag, indent=2), encoding="utf-8")
+        log.info("SQL ingest diagnostics written: %s", diag_path)
 
     write_inferred_relationships_csv(raw_edges, relationships_csv)
 
@@ -759,6 +766,49 @@ def phase_validate(cfg):
 # ── Entry point ────────────────────────────────────────────────────────────────
 
 PHASES = ["query-gen", "infer", "review", "generate", "validate", "all"]
+_LAST_METRICS_WRITER: MetricsWriter | None = None
+
+
+def _safe_metrics_event(writer: MetricsWriter | None, **kwargs) -> None:
+    if writer is None:
+        return
+    try:
+        writer.write_event(**kwargs)
+    except Exception as e:
+        logger.debug("Metrics write failed: %s", e)
+
+
+def _run_phase_with_metrics(
+    phase_name: str,
+    phase_fn,
+    writer: MetricsWriter | None,
+    phase_outcomes: list[dict[str, object]],
+) -> None:
+    start = perf_counter()
+    _safe_metrics_event(writer, phase=phase_name, event="start", status="running")
+    try:
+        phase_fn()
+        duration_ms = int((perf_counter() - start) * 1000)
+        phase_outcomes.append({"phase": phase_name, "status": "success", "duration_ms": duration_ms})
+        _safe_metrics_event(
+            writer,
+            phase=phase_name,
+            event="end",
+            status="success",
+            duration_ms=duration_ms,
+        )
+    except Exception as e:
+        duration_ms = int((perf_counter() - start) * 1000)
+        phase_outcomes.append({"phase": phase_name, "status": "failed", "duration_ms": duration_ms, "error": str(e)})
+        _safe_metrics_event(
+            writer,
+            phase=phase_name,
+            event="end",
+            status="failed",
+            duration_ms=duration_ms,
+            error=str(e),
+        )
+        raise
 
 
 def run(
@@ -787,6 +837,10 @@ def run(
     cfg = load_config(config_path)
     cfg._config_path = config_path  # type: ignore[attr-defined]
     rel_csv = cfg.paths.inferred_relationships_csv
+    global _LAST_METRICS_WRITER
+    metrics_writer = MetricsWriter()
+    _LAST_METRICS_WRITER = metrics_writer
+    phase_outcomes: list[dict[str, object]] = []
 
     # Override interactive setting if --non-interactive is passed
     if non_interactive:
@@ -795,23 +849,56 @@ def run(
     if phase == "query-gen":
         if not sql_dir:
             raise ConfigError("--sql-dir is required for phase query-gen")
-        phase_query_gen(cfg, sql_dir=sql_dir, run_label=run_label)
+        _run_phase_with_metrics(
+            "query-gen",
+            lambda: phase_query_gen(cfg, sql_dir=sql_dir, run_label=run_label),
+            metrics_writer,
+            phase_outcomes,
+        )
     elif phase == "infer":
-        phase_infer(cfg, sql_dir=sql_dir, run_dir=run_dir, relationships_csv=rel_csv)
+        _run_phase_with_metrics(
+            "infer",
+            lambda: phase_infer(cfg, sql_dir=sql_dir, run_dir=run_dir, relationships_csv=rel_csv),
+            metrics_writer,
+            phase_outcomes,
+        )
     elif phase == "review":
-        phase_review(cfg)
+        _run_phase_with_metrics("review", lambda: phase_review(cfg), metrics_writer, phase_outcomes)
     elif phase == "generate":
-        phase_generate(cfg, force_regenerate=force_regenerate)
+        _run_phase_with_metrics(
+            "generate",
+            lambda: phase_generate(cfg, force_regenerate=force_regenerate),
+            metrics_writer,
+            phase_outcomes,
+        )
     elif phase == "validate":
-        phase_validate(cfg)
+        _run_phase_with_metrics("validate", lambda: phase_validate(cfg), metrics_writer, phase_outcomes)
     elif phase == "all":
         if sql_dir:
-            phase_infer(cfg, sql_dir=sql_dir, run_dir=run_dir, relationships_csv=rel_csv)
-        phase_generate(cfg, force_regenerate=force_regenerate)
-        phase_validate(cfg)
+            _run_phase_with_metrics(
+                "infer",
+                lambda: phase_infer(cfg, sql_dir=sql_dir, run_dir=run_dir, relationships_csv=rel_csv),
+                metrics_writer,
+                phase_outcomes,
+            )
+        _run_phase_with_metrics(
+            "generate",
+            lambda: phase_generate(cfg, force_regenerate=force_regenerate),
+            metrics_writer,
+            phase_outcomes,
+        )
+        _run_phase_with_metrics("validate", lambda: phase_validate(cfg), metrics_writer, phase_outcomes)
     else:
         raise ConfigError(f"Unknown phase: {phase!r}. Choose from: {PHASES}")
 
+    _safe_metrics_event(
+        metrics_writer,
+        phase="run",
+        event="summary",
+        status="success",
+        counts={"selected_phase": phase, "phase_outcomes": phase_outcomes},
+        exit_code=int(ExitCode.SUCCESS),
+    )
     return ExitCode.SUCCESS
 
 
@@ -878,14 +965,49 @@ Offline workflow:
             non_interactive=args.non_interactive,
             force_regenerate=args.force_regenerate,
         )
+        _safe_metrics_event(
+            _LAST_METRICS_WRITER or MetricsWriter(),
+            phase="run",
+            event="terminal",
+            status="success",
+            counts={"selected_phase": args.phase},
+            exit_code=int(exit_code),
+        )
         sys.exit(exit_code)
     except RigorError as e:
+        _safe_metrics_event(
+            _LAST_METRICS_WRITER or MetricsWriter(),
+            phase="run",
+            event="terminal",
+            status="failed",
+            counts={"selected_phase": args.phase},
+            error=str(e),
+            exit_code=int(e.exit_code),
+        )
         logger.error("%s", e)
         sys.exit(e.exit_code)
     except KeyboardInterrupt:
+        _safe_metrics_event(
+            _LAST_METRICS_WRITER or MetricsWriter(),
+            phase="run",
+            event="terminal",
+            status="failed",
+            counts={"selected_phase": args.phase},
+            error="Interrupted by user",
+            exit_code=130,
+        )
         logger.warning("Interrupted by user")
         sys.exit(130)
     except Exception as e:
+        _safe_metrics_event(
+            _LAST_METRICS_WRITER or MetricsWriter(),
+            phase="run",
+            event="terminal",
+            status="failed",
+            counts={"selected_phase": args.phase},
+            error=str(e),
+            exit_code=1,
+        )
         logger.exception("Unexpected error: %s", e)
         sys.exit(1)
 

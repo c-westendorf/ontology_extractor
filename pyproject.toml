@@ -15,6 +15,7 @@ dependencies = [
   "requests>=2.31",
   "pandas>=2.0",
   "streamlit>=1.32",
+  "sqlglot>=26.0",
 ]
 authors = [{name="Prompt Pilates / Chris"}]
 

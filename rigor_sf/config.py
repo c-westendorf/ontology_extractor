@@ -5,6 +5,8 @@ Defines all configuration classes per SPEC_V2.md §9.
 
 from __future__ import annotations
 
+import os
+import re
 from typing import List, Optional
 
 import yaml
@@ -198,7 +200,44 @@ def load_config(path: str) -> AppConfig:
     except yaml.YAMLError as e:
         raise ConfigError(f"Invalid YAML in config file: {path}", details=str(e))
 
+    data = _interpolate_env_vars(data, path)
+
     try:
         return AppConfig.model_validate(data)
     except Exception as e:
         raise ConfigError(f"Config validation failed: {path}", details=str(e))
+
+
+_ENV_PATTERN = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-(.*?))?\}")
+
+
+def _interpolate_env_string(value: str, config_path: str) -> str:
+    """Interpolate ${VAR} and ${VAR:-default} in a single string."""
+
+    def _replace(match: re.Match[str]) -> str:
+        var_name = match.group(1)
+        default_value = match.group(2)
+        env_val = os.getenv(var_name)
+        if env_val is not None and env_val != "":
+            return env_val
+        if default_value is not None:
+            return default_value
+        from .exit_codes import ConfigError
+
+        raise ConfigError(
+            f"Missing required environment variable '{var_name}' in config",
+            details=f"Config file: {config_path}",
+        )
+
+    return _ENV_PATTERN.sub(_replace, value)
+
+
+def _interpolate_env_vars(value, config_path: str):
+    """Recursively interpolate env vars in string leaves."""
+    if isinstance(value, dict):
+        return {k: _interpolate_env_vars(v, config_path) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_interpolate_env_vars(item, config_path) for item in value]
+    if isinstance(value, str):
+        return _interpolate_env_string(value, config_path)
+    return value

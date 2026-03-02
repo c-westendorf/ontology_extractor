@@ -207,6 +207,7 @@ class RunLoader:
             "from_table", "from_columns", "from_column",
             "to_table", "to_columns", "to_column",
             "confidence_sql", "frequency",
+            "parser_dialect", "predicate_type", "confidence_reason", "ast_path", "source_query_block",
             "match_rate", "pk_unique_rate", "fk_null_rate",
             "status", "evidence", "data_quality_flag",
         ]
